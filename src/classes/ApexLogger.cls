@@ -25,7 +25,7 @@
  * Library allowing logging and exposing log messages from Apex to Salesforce Admins
  * which results in improving debuggability of production environments.
  *
- * @version 0.0.1
+ * @version 0.0.2
  */
 public without sharing class ApexLogger {
 	
@@ -34,11 +34,9 @@ public without sharing class ApexLogger {
 	public static final String WARN     = 'WARN';
 	public static final String ERROR    = 'ERROR';
 
-    private static final String TIMESTAMP_FORMAT = 'yyyy-MM-dd HH:mm:ss';
+	private static final String TIMESTAMP_FORMAT = 'yyyy-MM-dd HH:mm:ss';
 	private static final IllegalUsageException BLANK_EXCEPTION = new IllegalUsageException();
 	private static final Reflector REFLECTOR = new Reflector(ApexLogger.class.getName());
-
-    private static ApexLogger Instance;
 	
 	private Boolean buffered;
 	
@@ -47,7 +45,7 @@ public without sharing class ApexLogger {
 	@TestVisible
 	private ApexLogger(Boolean buffered) {
 		this.buffered = buffered;
-        this.buffer = new List<Apex_Log__c>();
+		this.buffer = new List<Apex_Log__c>();
 	}
 
 	/**
@@ -69,26 +67,14 @@ public without sharing class ApexLogger {
 	public static ApexLogger create(Boolean buffered) {
 		return new ApexLogger(buffered);
 	}
-	
-	/**
-	 * Returns unbuffered, shared ApexLogger instance
-	 *
-	 * @return shared ApexLogger
-	 */
-	public static ApexLogger getInstance() {
-		if (Instance == null) {
-			Instance = new ApexLogger(false);
-		}
-		return Instance;
+
+	public Boolean isBuffered() {
+		return this.buffered;
 	}
 
-    public Boolean isBuffered() {
-        return this.buffered;
-    }
-
-    public void setBuffered(Boolean buffered) {
-        this.buffered = buffered;
-    }
+	public void setBuffered(Boolean buffered) {
+		this.buffered = buffered;
+	}
 
 	public void debug(String message) {
 		this.debug(message, BLANK_EXCEPTION);
@@ -261,22 +247,22 @@ public without sharing class ApexLogger {
 	 *
 	 * @param dt
 	 */
-    public void deleteLogsBefore(Datetime dt) {
-        delete [SELECT Id FROM Apex_Log__c WHERE Timestamp__c <= :dt];
-    }
+	public void deleteLogsBefore(Datetime dt) {
+		delete [SELECT Id FROM Apex_Log__c WHERE Timestamp__c <= :dt];
+	}
 
-    /**
-     * Removes oldest logs to the given limit using 2 DML statements. If logs count is less than the limit, does nothing.
-     * Example: if there are 150 logs in database and log limit is set to 100, the 50 oldest logs are removed.
-     *
-     * @param logsLimit to which logs count will be adjusted
-     */
-    public void deleteLogsToLimit(Integer logsLimit) {
-        Integer logsCount = [SELECT COUNT() FROM Apex_Log__c];
-        if (logsCount > logsLimit) {
-            delete [SELECT Id FROM Apex_Log__c ORDER BY Timestamp__c ASC LIMIT :(logsCount - logsLimit)];
-        }
-    }
+	/**
+	 * Removes oldest logs to the given limit using 2 DML statements. If logs count is less than the limit, does nothing.
+	 * Example: if there are 150 logs in database and log limit is set to 100, the 50 oldest logs are removed.
+	 *
+	 * @param logsLimit to which logs count will be adjusted
+	 */
+	public void deleteLogsToLimit(Integer logsLimit) {
+		Integer logsCount = [SELECT COUNT() FROM Apex_Log__c];
+		if (logsCount > logsLimit) {
+			delete [SELECT Id FROM Apex_Log__c ORDER BY Timestamp__c ASC LIMIT :(logsCount - logsLimit)];
+		}
+	}
 	
 	private String buildLogMessage(String message, Exception thrownException) {
 		if (String.isBlank(message)) {

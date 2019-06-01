@@ -9,8 +9,10 @@
         <members>Apex_Log__c.Class__c</members>
         <members>Apex_Log__c.Method__c</members>
         <members>Apex_Log__c.Message__c</members>
+        <members>Apex_Log__c.Exception__c</members>
         <members>Apex_Log__c.Severity__c</members>
         <members>Apex_Log__c.Timestamp__c</members>
+        <members>Apex_Log__c.Time__c</members>
         <members>Apex_Log__c.WithException__c</members>
         <name>CustomField</name>
     </types>

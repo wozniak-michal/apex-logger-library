@@ -1,33 +1,10 @@
-/*
- * MIT License
- *
- * Copyright (c) 2019 Michał Woźniak - Github @ purplishdev
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- */
 @IsTest
 private class ApexLoggerTest {
 
 	@IsTest
 	static void debugMessage() {
 		// given
-		ApexLogger logger = ApexLogger.getInstance();
+		ApexLogger logger = ApexLogger.create();
 
 		// when
 		Test.startTest();
@@ -50,7 +27,7 @@ private class ApexLoggerTest {
 	@IsTest
 	static void debugMessageWithArguments() {
 		// given
-		ApexLogger logger = ApexLogger.getInstance();
+		ApexLogger logger = ApexLogger.create();
 
 		// when
 		Test.startTest();
@@ -73,7 +50,7 @@ private class ApexLoggerTest {
 	@IsTest
 	static void debugException() {
 		// given
-		ApexLogger logger = ApexLogger.getInstance();
+		ApexLogger logger = ApexLogger.create();
 
 		// when
 		Test.startTest();
@@ -96,7 +73,7 @@ private class ApexLoggerTest {
 	@IsTest
 	static void infoMessage() {
 		// given
-		ApexLogger logger = ApexLogger.getInstance();
+		ApexLogger logger = ApexLogger.create();
 
 		// when
 		Test.startTest();
@@ -119,7 +96,7 @@ private class ApexLoggerTest {
 	@IsTest
 	static void infoMessageWithArguments() {
 		// given
-		ApexLogger logger = ApexLogger.getInstance();
+		ApexLogger logger = ApexLogger.create();
 
 		// when
 		Test.startTest();
@@ -142,7 +119,7 @@ private class ApexLoggerTest {
 	@IsTest
 	static void infoException() {
 		// given
-		ApexLogger logger = ApexLogger.getInstance();
+		ApexLogger logger = ApexLogger.create();
 
 		// when
 		Test.startTest();
@@ -165,7 +142,7 @@ private class ApexLoggerTest {
 	@IsTest
 	static void warnMessage() {
 		// given
-		ApexLogger logger = ApexLogger.getInstance();
+		ApexLogger logger = ApexLogger.create();
 
 		// when
 		Test.startTest();
@@ -188,7 +165,7 @@ private class ApexLoggerTest {
 	@IsTest
 	static void warnMessageWithArguments() {
 		// given
-		ApexLogger logger = ApexLogger.getInstance();
+		ApexLogger logger = ApexLogger.create();
 
 		// when
 		Test.startTest();
@@ -211,7 +188,7 @@ private class ApexLoggerTest {
 	@IsTest
 	static void warnException() {
 		// given
-		ApexLogger logger = ApexLogger.getInstance();
+		ApexLogger logger = ApexLogger.create();
 
 		// when
 		Test.startTest();
@@ -234,7 +211,7 @@ private class ApexLoggerTest {
 	@IsTest
 	static void errorMessage() {
 		// given
-		ApexLogger logger = ApexLogger.getInstance();
+		ApexLogger logger = ApexLogger.create();
 
 		// when
 		Test.startTest();
@@ -257,7 +234,7 @@ private class ApexLoggerTest {
 	@IsTest
 	static void errorMessageWithArguments() {
 		// given
-		ApexLogger logger = ApexLogger.getInstance();
+		ApexLogger logger = ApexLogger.create();
 
 		// when
 		Test.startTest();
@@ -280,7 +257,7 @@ private class ApexLoggerTest {
 	@IsTest
 	static void errorException() {
 		// given
-		ApexLogger logger = ApexLogger.getInstance();
+		ApexLogger logger = ApexLogger.create();
 
 		// when
 		Test.startTest();
@@ -303,7 +280,7 @@ private class ApexLoggerTest {
 	@IsTest
 	static void logMessage() {
 		// given
-		ApexLogger logger = ApexLogger.getInstance();
+		ApexLogger logger = ApexLogger.create();
 
 		// when
 		Test.startTest();
@@ -326,7 +303,7 @@ private class ApexLoggerTest {
 	@IsTest
 	static void logMessageWithArguments() {
 		// given
-		ApexLogger logger = ApexLogger.getInstance();
+		ApexLogger logger = ApexLogger.create();
 
 		// when
 		Test.startTest();
@@ -349,7 +326,7 @@ private class ApexLoggerTest {
 	@IsTest
 	static void logException() {
 		// given
-		ApexLogger logger = ApexLogger.getInstance();
+		ApexLogger logger = ApexLogger.create();
 
 		// when
 		Test.startTest();
@@ -372,7 +349,7 @@ private class ApexLoggerTest {
 	@IsTest
 	static void customLogMessage() {
 		// given
-		ApexLogger logger = ApexLogger.getInstance();
+		ApexLogger logger = ApexLogger.create();
 
 		// when
 		Test.startTest();
@@ -395,7 +372,7 @@ private class ApexLoggerTest {
 	@IsTest
 	static void customLogMessageWithArguments() {
 		// given
-		ApexLogger logger = ApexLogger.getInstance();
+		ApexLogger logger = ApexLogger.create();
 
 		// when
 		Test.startTest();
@@ -418,7 +395,7 @@ private class ApexLoggerTest {
 	@IsTest
 	static void customLogException() {
 		// given
-		ApexLogger logger = ApexLogger.getInstance();
+		ApexLogger logger = ApexLogger.create();
 
 		// when
 		Test.startTest();
@@ -469,40 +446,40 @@ private class ApexLoggerTest {
 		logger.debug('Five');
 
 		// then
-        System.assertEquals(true, logger.isBuffered());
-        System.assertEquals(0, getAllLogs().size());
+		System.assertEquals(true, logger.isBuffered());
+		System.assertEquals(0, getAllLogs().size());
 
-        logger.flush();
+		logger.flush();
 		System.assertEquals(1, Limits.getDmlStatements());
 
 		List<Apex_Log__c> logs = getAllLogs();
 		System.assertEquals(5, logs.size());
 	}
 
-    @IsTest
-    static void unbufferedLog() {
-        // given
-        ApexLogger logger = ApexLogger.create();
+	@IsTest
+	static void unbufferedLog() {
+		// given
+		ApexLogger logger = ApexLogger.create();
 
-        // when
-        logger.debug('One');
-        System.assertEquals(1, getAllLogs().size());
+		// when
+		logger.debug('One');
+		System.assertEquals(1, getAllLogs().size());
 
-        logger.setBuffered(true);
-        logger.debug('Two');
-        logger.debug('Three');
-        logger.debug('Four');
-        logger.debug('Five');
+		logger.setBuffered(true);
+		logger.debug('Two');
+		logger.debug('Three');
+		logger.debug('Four');
+		logger.debug('Five');
 
-        // then
-        System.assertEquals(1, getAllLogs().size());
+		// then
+		System.assertEquals(1, getAllLogs().size());
 
-        logger.flush();
-        System.assertEquals(2, Limits.getDmlStatements());
+		logger.flush();
+		System.assertEquals(2, Limits.getDmlStatements());
 
-        List<Apex_Log__c> logs = getAllLogs();
-        System.assertEquals(5, logs.size());
-    }
+		List<Apex_Log__c> logs = getAllLogs();
+		System.assertEquals(5, logs.size());
+	}
 
 	@IsTest
 	static void deleteAllLogs() {
@@ -544,27 +521,27 @@ private class ApexLoggerTest {
 		System.assertEquals(now, logs[0].Timestamp__c);
 	}
 
-    @IsTest
-    static void deleteLogsToLimit() {
-        // given
-        ApexLogger logger = ApexLogger.create();
-        Datetime now = System.now();
-        insert new List<Apex_Log__c> {
-                new Apex_Log__c(Timestamp__c = now),
-                new Apex_Log__c(Timestamp__c = now.addDays(-5)),
-                new Apex_Log__c(Timestamp__c = now.addDays(-10))
-        };
+	@IsTest
+	static void deleteLogsToLimit() {
+		// given
+		ApexLogger logger = ApexLogger.create();
+		Datetime now = System.now();
+		insert new List<Apex_Log__c> {
+				new Apex_Log__c(Timestamp__c = now),
+				new Apex_Log__c(Timestamp__c = now.addDays(-5)),
+				new Apex_Log__c(Timestamp__c = now.addDays(-10))
+		};
 
-        // when
-        Test.startTest();
-        logger.deleteLogsToLimit(1);
-        Test.stopTest();
+		// when
+		Test.startTest();
+		logger.deleteLogsToLimit(1);
+		Test.stopTest();
 
-        // then
-        List<Apex_Log__c> logs = getAllLogs();
-        System.assertEquals(1, logs.size());
-        System.assertEquals(now, logs[0].Timestamp__c);
-    }
+		// then
+		List<Apex_Log__c> logs = getAllLogs();
+		System.assertEquals(1, logs.size());
+		System.assertEquals(now, logs[0].Timestamp__c);
+	}
 
 	private static List<Apex_Log__c> getAllLogs() {
 		return [
