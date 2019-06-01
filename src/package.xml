@@ -1,4 +1,34 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Package xmlns="http://soap.sforce.com/2006/04/metadata">
+    <types>
+        <members>ApexLogger</members>
+        <members>ApexLoggerTest</members>
+        <name>ApexClass</name>
+    </types>
+    <types>
+        <members>Apex_Log__c.Class__c</members>
+        <members>Apex_Log__c.Method__c</members>
+        <members>Apex_Log__c.Message__c</members>
+        <members>Apex_Log__c.Severity__c</members>
+        <members>Apex_Log__c.Timestamp__c</members>
+        <members>Apex_Log__c.WithException__c</members>
+        <name>CustomField</name>
+    </types>
+    <types>
+        <members>Apex_Log__c</members>
+        <name>CustomObject</name>
+    </types>
+    <types>
+        <members>Apex_Log__c-Admin Log Layout</members>
+        <name>Layout</name>
+    </types>
+    <types>
+        <members>Apex_Log__c.All</members>
+        <name>ListView</name>
+    </types>
+    <types>
+        <members>Apex_Logs_User</members>
+        <name>PermissionSet</name>
+    </types>
     <version>45.0</version>
 </Package>
