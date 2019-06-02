@@ -415,6 +415,52 @@ private class ApexLoggerTest {
 		System.assertNotEquals(null, logs[0].Time__c);
 	}
 
+    @IsTest
+    static void limits() {
+        // given
+        ApexLogger logger = ApexLogger.create();
+
+        // when
+        Test.startTest();
+        logger.limits();
+        Test.stopTest();
+
+        // then
+        List<Apex_Log__c> logs = getAllLogs();
+        System.assertEquals(1, logs.size());
+        System.assertEquals('LIMITS', logs[0].Severity__c);
+        System.assert(logs[0].Message__c.startsWith('CPU Time'));
+        System.assertEquals('limits', logs[0].Method__c);
+        System.assertEquals('ApexLoggerTest', logs[0].Class__c);
+        System.assertEquals(false, logs[0].WithException__c);
+        System.assertEquals(null, logs[0].Exception__c);
+        System.assertNotEquals(null, logs[0].Timestamp__c);
+        System.assertNotEquals(null, logs[0].Time__c);
+    }
+
+    @IsTest
+    static void limitsMessage() {
+        // given
+        ApexLogger logger = ApexLogger.create();
+
+        // when
+        Test.startTest();
+        logger.limits('Message {0} {1}', new Object[] { 'with', 'arguments' });
+        Test.stopTest();
+
+        // then
+        List<Apex_Log__c> logs = getAllLogs();
+        System.assertEquals(1, logs.size());
+        System.assertEquals('LIMITS', logs[0].Severity__c);
+        System.assert(logs[0].Message__c.startsWith('Message with arguments\n\n'));
+        System.assertEquals('limitsMessage', logs[0].Method__c);
+        System.assertEquals('ApexLoggerTest', logs[0].Class__c);
+        System.assertEquals(false, logs[0].WithException__c);
+        System.assertEquals(null, logs[0].Exception__c);
+        System.assertNotEquals(null, logs[0].Timestamp__c);
+        System.assertNotEquals(null, logs[0].Time__c);
+    }
+
 	@IsTest
 	static void nestedLog() {
 		// given
@@ -434,7 +480,7 @@ private class ApexLoggerTest {
 	}
 
 	@IsTest
-	static void bufferedLog() {
+	static void batchedLog() {
 		// given
 		ApexLogger logger = ApexLogger.create(true);
 
@@ -446,43 +492,67 @@ private class ApexLoggerTest {
 		logger.debug('Five');
 
 		// then
-		System.assertEquals(true, logger.isBuffered());
+		System.assertEquals(true, logger.isBatched());
 		System.assertEquals(0, getAllLogs().size());
 
 		logger.flush();
 		System.assertEquals(1, Limits.getDmlStatements());
-
-		List<Apex_Log__c> logs = getAllLogs();
-		System.assertEquals(5, logs.size());
+		System.assertEquals(5, getAllLogs().size());
 	}
 
 	@IsTest
-	static void unbufferedLog() {
+	static void unbatchedLog() {
 		// given
 		ApexLogger logger = ApexLogger.create();
 
 		// when
 		logger.debug('One');
-		System.assertEquals(1, getAllLogs().size());
-
-		logger.setBuffered(true);
 		logger.debug('Two');
 		logger.debug('Three');
 		logger.debug('Four');
 		logger.debug('Five');
 
 		// then
-		System.assertEquals(1, getAllLogs().size());
-
-		logger.flush();
-		System.assertEquals(2, Limits.getDmlStatements());
-
-		List<Apex_Log__c> logs = getAllLogs();
-		System.assertEquals(5, logs.size());
+        System.assertEquals(false, logger.isBatched());
+        System.assertEquals(5, Limits.getDmlStatements());
+        System.assertEquals(5, getAllLogs().size());
 	}
 
+    @IsTest
+    static void batchControlLog() {
+        // given
+        ApexLogger logger = ApexLogger.create();
+
+        // when
+        logger.debug('One');
+
+        // then
+        System.assertEquals(false, logger.isBatched());
+        System.assertEquals(1, Limits.getDmlStatements());
+        System.assertEquals(1, getAllLogs().size());
+
+        // and when
+        logger.setBatched(true);
+        logger.debug('Two');
+        logger.debug('Three');
+        logger.debug('Four');
+        logger.debug('Five');
+
+        // then
+        System.assertEquals(true, logger.isBatched());
+        System.assertEquals(1, Limits.getDmlStatements());
+        System.assertEquals(1, getAllLogs().size());
+
+        // and when
+        logger.flush();
+
+        // then
+        System.assertEquals(2, Limits.getDmlStatements());
+        System.assertEquals(5, getAllLogs().size());
+    }
+
 	@IsTest
-	static void deleteAllLogs() {
+	static void deleteAll() {
 		// given
 		ApexLogger logger = ApexLogger.create();
 		logger.debug('One');
@@ -491,16 +561,15 @@ private class ApexLoggerTest {
 
 		// when
 		Test.startTest();
-		logger.deleteAllLogs();
+		logger.deleteAll();
 		Test.stopTest();
 
 		// then
-		List<Apex_Log__c> logs = getAllLogs();
-		System.assertEquals(0, logs.size());
+		System.assertEquals(0, getAllLogs().size());
 	}
 
 	@IsTest
-	static void deleteLogsBefore() {
+	static void deleteBeforeDate() {
 		// given
 		ApexLogger logger = ApexLogger.create();
 		Datetime now = System.now();
@@ -512,17 +581,18 @@ private class ApexLoggerTest {
 
 		// when
 		Test.startTest();
-		logger.deleteLogsBefore(System.now().addDays(-5));
+		logger.deleteBeforeDate(System.now().addDays(-5));
 		Test.stopTest();
 
 		// then
 		List<Apex_Log__c> logs = getAllLogs();
-		System.assertEquals(1, logs.size());
+		System.assertEquals(2, logs.size());
 		System.assertEquals(now, logs[0].Timestamp__c);
+		System.assertEquals(now.addDays(-5), logs[1].Timestamp__c);
 	}
 
 	@IsTest
-	static void deleteLogsToLimit() {
+	static void deleteToLimit() {
 		// given
 		ApexLogger logger = ApexLogger.create();
 		Datetime now = System.now();
@@ -534,7 +604,7 @@ private class ApexLoggerTest {
 
 		// when
 		Test.startTest();
-		logger.deleteLogsToLimit(1);
+		logger.deleteToLimit(1);
 		Test.stopTest();
 
 		// then
@@ -543,10 +613,31 @@ private class ApexLoggerTest {
 		System.assertEquals(now, logs[0].Timestamp__c);
 	}
 
+    @IsTest
+    static void ignoreLogsOnDeleteToLimit() {
+        // given
+        ApexLogger logger = ApexLogger.create();
+        Datetime now = System.now();
+        insert new List<Apex_Log__c> {
+                new Apex_Log__c(Timestamp__c = now),
+                new Apex_Log__c(Timestamp__c = now.addDays(-5)),
+                new Apex_Log__c(Timestamp__c = now.addDays(-10))
+        };
+
+        // when
+        Test.startTest();
+        logger.deleteToLimit(10);
+        Test.stopTest();
+
+        // then
+        System.assertEquals(3, getAllLogs().size());
+    }
+
 	private static List<Apex_Log__c> getAllLogs() {
 		return [
 			SELECT Time__c, Severity__c, Class__c, Method__c, Message__c, WithException__c, Exception__c, Timestamp__c
 			FROM Apex_Log__c
+            ORDER BY Timestamp__c DESC
 		];
 	}
 

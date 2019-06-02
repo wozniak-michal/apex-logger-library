@@ -25,7 +25,7 @@
  * Library allowing logging and exposing log messages from Apex to Salesforce Admins
  * which results in improving debuggability of production environments.
  *
- * @version 0.0.2
+ * @version 0.0.3
  */
 public without sharing class ApexLogger {
 	
@@ -37,21 +37,21 @@ public without sharing class ApexLogger {
 	private static final String TIMESTAMP_FORMAT = 'yyyy-MM-dd HH:mm:ss';
 	private static final IllegalUsageException BLANK_EXCEPTION = new IllegalUsageException();
 	private static final Reflector REFLECTOR = new Reflector(ApexLogger.class.getName());
-	
-	private Boolean buffered;
-	
-	private List<Apex_Log__c> buffer;
+
+	private Boolean batched;
+
+	private List<Apex_Log__c> batch;
 
 	@TestVisible
-	private ApexLogger(Boolean buffered) {
-		this.buffered = buffered;
-		this.buffer = new List<Apex_Log__c>();
+	private ApexLogger(Boolean batched) {
+		this.batched = batched;
+		this.batch = new List<Apex_Log__c>();
 	}
 
 	/**
-	 * Creates new ApexLogger instance with buffered flag set to false
+	 * Creates new ApexLogger instance with batched flag set to false
 	 *
-	 * @see ApexLogger#create(Boolean buffered)
+	 * @see ApexLogger#create(Boolean batched)
 	 */
 	public static ApexLogger create() {
 		return ApexLogger.create(false);
@@ -60,21 +60,23 @@ public without sharing class ApexLogger {
 	/**
 	 * Creates new ApexLogger instance
 	 *
-	 * @param buffered flag indicating if logs should be buffered before committing
+	 * @param batched flag indicating if logs should be batched before committing
 	 *
 	 * @return new ApexLogger
 	 */
-	public static ApexLogger create(Boolean buffered) {
-		return new ApexLogger(buffered);
+	public static ApexLogger create(Boolean batched) {
+		return new ApexLogger(batched);
 	}
 
-	public Boolean isBuffered() {
-		return this.buffered;
+	public Boolean isBatched() {
+		return this.batched;
 	}
 
-	public void setBuffered(Boolean buffered) {
-		this.buffered = buffered;
+	public void setBatched(Boolean batched) {
+		this.batched = batched;
 	}
+
+    /* DEBUG */
 
 	public void debug(String message) {
 		this.debug(message, BLANK_EXCEPTION);
@@ -95,7 +97,9 @@ public without sharing class ApexLogger {
 	public void debug(String message, Exception thrownException) {
 		this.log(ApexLogger.DEBUG, message, thrownException);
 	}
-	
+
+    /* INFO */
+
 	public void info(String message) {
 		this.info(message, BLANK_EXCEPTION);
 	}
@@ -115,7 +119,9 @@ public without sharing class ApexLogger {
 	public void info(String message, Exception thrownException) {
 		this.log(ApexLogger.INFO, message, thrownException);
 	}
-	
+
+    /* WARN */
+
 	public void warn(String message) {
 		this.warn(message, BLANK_EXCEPTION);
 	}
@@ -135,7 +141,9 @@ public without sharing class ApexLogger {
 	public void warn(String message, Exception thrownException) {
 		this.log(ApexLogger.WARN, message, thrownException);
 	}
-	
+
+    /* ERROR */
+
 	public void error(String message) {
 		this.error(message, BLANK_EXCEPTION);
 	}
@@ -155,7 +163,28 @@ public without sharing class ApexLogger {
 	public void error(String message, Exception thrownException) {
 		this.log(ApexLogger.ERROR, message, thrownException);
 	}
-	
+
+    /* LIMITS */
+
+    public void limits() {
+        this.limits(null);
+    }
+
+    public void limits(String messageFormat, Object[] arguments) {
+        this.limits(String.format(messageFormat, arguments));
+    }
+
+    public void limits(String message) {
+        if (message == null) {
+            message = buildLimitsMessage();
+        } else {
+            message += '\n\n' + buildLimitsMessage();
+        }
+        this.log('LIMITS', message);
+    }
+
+    /* LOG */
+
 	public void log(String severity, String message) {
 		this.log(severity, message, BLANK_EXCEPTION);
 	}
@@ -165,7 +194,7 @@ public without sharing class ApexLogger {
 	}
 	
 	/**
-	 * Creates log with given parameters and saves the log either to the database or to the buffer
+	 * Creates log with given parameters and saves the log either to the database or to the batch
 	 *
 	 * Calling class and method names are automatically assumed from the internal stacktrace
 	 *
@@ -174,10 +203,10 @@ public without sharing class ApexLogger {
 	 * @param thrownException message and stacktrace embedded into the log
 	 */
 	public void log(String severity, String message, Exception thrownException) {
-		List<Caller> callers = REFLECTOR.getCallers();
-		String className = callers[0].className;
-		String methodName = callers[0].methodName;
-		this.log(severity, className, methodName, message, thrownException);
+		Caller caller = REFLECTOR.getCaller();
+        String className = caller.className;
+        String methodName = caller.methodName;
+        this.log(severity, className, methodName, message, thrownException);
 	}
 	
 	public void log(String severity, String formatMessage, Object[] arguments) {
@@ -205,7 +234,7 @@ public without sharing class ApexLogger {
 	}
 	
 	/**
-	 * Creates log with given parameters and saves the log either to the database or to the buffer
+	 * Creates log with given parameters and saves the log either to the database or to the batch
 	 *
 	 * @param severity level of the log
 	 * @param className of statement calling the log
@@ -224,22 +253,22 @@ public without sharing class ApexLogger {
 		);
 		this.save(log);
 	}
-	
+
 	/**
-	 * If buffered, saves logs into database using 1 DML statement and clears the buffer, otherwise does nothing.
+	 * If batched, saves logs into database using 1 DML statement and clears the batch, otherwise does nothing.
 	 */
 	public void flush() {
-		if (this.buffered && !this.buffer.isEmpty()) {
-			insert this.buffer;
-			this.buffer.clear();
+		if (this.batched && !this.batch.isEmpty()) {
+			insert this.batch;
+			this.batch.clear();
 		}
 	}
 	
 	/**
 	 * Deletes all logs from database using 1 DML statement
 	 */
-	public void deleteAllLogs() {
-		this.deleteLogsBefore(System.now());
+	public void deleteAll() {
+        delete [SELECT Id FROM Apex_Log__c];
 	}
 
 	/**
@@ -247,8 +276,8 @@ public without sharing class ApexLogger {
 	 *
 	 * @param dt
 	 */
-	public void deleteLogsBefore(Datetime dt) {
-		delete [SELECT Id FROM Apex_Log__c WHERE Timestamp__c <= :dt];
+	public void deleteBeforeDate(Datetime dt) {
+		delete [SELECT Id FROM Apex_Log__c WHERE Timestamp__c < :dt];
 	}
 
 	/**
@@ -257,13 +286,13 @@ public without sharing class ApexLogger {
 	 *
 	 * @param logsLimit to which logs count will be adjusted
 	 */
-	public void deleteLogsToLimit(Integer logsLimit) {
+	public void deleteToLimit(Integer logsLimit) {
 		Integer logsCount = [SELECT COUNT() FROM Apex_Log__c];
 		if (logsCount > logsLimit) {
 			delete [SELECT Id FROM Apex_Log__c ORDER BY Timestamp__c ASC LIMIT :(logsCount - logsLimit)];
 		}
 	}
-	
+
 	private String buildLogMessage(String message, Exception thrownException) {
 		if (String.isBlank(message)) {
 			message = 'Exception thrown: ' + thrownException.getTypeName();
@@ -280,32 +309,49 @@ public without sharing class ApexLogger {
 		}
 		return message;
 	}
-	
+
+    private String buildLimitsMessage() {
+        return String.format(
+                'CPU Time: {0} / {1} ms\nDB Time: {2} / {3} ms\nHeap: {4} / {5} bytes\n' +
+                        'DML queries: {6} / {7}\nDML rows: {8} / {9}\n' +
+                        'SOQL queries: {10} / {11}\nSOSL queries: {12} / {13}',
+                new Object[] {
+                        Limits.getCpuTime(), Limits.getLimitCpuTime(),
+                        Limits.getDatabaseTime(), Limits.getLimitDatabaseTime(),
+                        Limits.getHeapSize(), Limits.getLimitHeapSize(),
+                        Limits.getDmlStatements(), Limits.getLimitDmlStatements(),
+                        Limits.getDmlRows(), Limits.getLimitDmlRows(),
+                        Limits.getQueries(), Limits.getLimitQueries(),
+                        Limits.getSoslQueries(), Limits.getLimitSoslQueries()
+                }
+        );
+    }
+
 	private void save(Apex_Log__c log) {
 		Datetime now = System.now();
 		log.Timestamp__c = now;
 		log.Time__c = now.format(TIMESTAMP_FORMAT);
 		
-		if (this.buffered) {
-			this.buffer.add(log);
+		if (this.batched) {
+			this.batch.add(log);
 		} else {
 			insert log;
 		}
 	}
-	
+
 	private class Reflector {
-		private Pattern callerPattern = Pattern.compile('\\.(.+):');
-		private String ignoredClass;
+        private final Caller anonymousCaller = new Caller('AnonymousApex', 'AnonymousApex');
+		private final Pattern callerPattern = Pattern.compile('\\.(.+):');
+		private final String ignoredClass;
 		
 		public Reflector(String ignoredClass) {
 			this.ignoredClass = ignoredClass;
 		}
 
-		public List<Caller> getCallers() {
+		public Caller getCaller() {
 			final String stacktrace = new NullPointerException().getStackTraceString();
 			final Matcher matcher = callerPattern.matcher(stacktrace);
-			
-			final List<Caller> callers = new List<Caller>();
+
 			while (matcher.find()) {
 				final List<String> haystack = matcher.group(1).split('\\.');
 				if (haystack[0] == ignoredClass) {
@@ -314,15 +360,21 @@ public without sharing class ApexLogger {
 				Caller caller = new Caller();
 				caller.methodName = haystack.remove(haystack.size() - 1);
 				caller.className = String.join(haystack, '.');
-				callers.add(caller);
+                return caller;
 			}
-			return callers;
+            // reaches where when logger is executed in Anonymous Apex
+            return anonymousCaller;
 		}
 	}
 	
 	private class Caller {
 		public String className { get; set; }
 		public String methodName { get; set; }
+        public Caller() { }
+        public Caller(String className, String methodName) {
+            this.className = className;
+            this.methodName = methodName;
+        }
 	}
 	
 	public class IllegalUsageException extends Exception { }
