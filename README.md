@@ -112,16 +112,14 @@ LOG.isBatched();
 
 ### Logs removal
 ```apex
-ApexLogger LOG = ApexLogger.create();
-
 // deletes all logs from org
-LOG.deleteAllLogs();
+LOG.deleteAll();
 
 // deletes all logs prior to datetime
-LOG.deleteLogsBefore(Datetime.newInstance(2019, 06, 01));
+LOG.deleteBeforeDate(Datetime.newInstance(2019, 06, 01));
 
 // deletes all logs except 100 latest
-LOG.deleteLogsToLimit(100);
+LOG.deleteToLimit(100);
 ```
 
 ## Considerations
