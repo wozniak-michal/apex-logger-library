@@ -18,6 +18,7 @@
     </types>
     <types>
         <members>Apex_Log__c</members>
+        <members>Apex_Log_Setting__mdt</members>
         <name>CustomObject</name>
     </types>
     <types>
@@ -31,6 +32,10 @@
     <types>
         <members>Apex_Logs_User</members>
         <name>PermissionSet</name>
+    </types>
+    <types>
+        <members>Apex_Log_Setting.Output_System_Debug_Logs</members>
+        <name>CustomMetadata</name>
     </types>
     <version>45.0</version>
 </Package>

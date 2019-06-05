@@ -25,7 +25,7 @@
  * Library allowing logging and exposing log messages from Apex to Salesforce Admins
  * which results in improving debuggability of production environments.
  *
- * @version 0.0.3
+ * @version 0.0.4
  */
 public without sharing class ApexLogger {
 	
@@ -33,47 +33,66 @@ public without sharing class ApexLogger {
 	public static final String INFO     = 'INFO';
 	public static final String WARN     = 'WARN';
 	public static final String ERROR    = 'ERROR';
-
+	
 	private static final String TIMESTAMP_FORMAT = 'yyyy-MM-dd HH:mm:ss';
-	private static final IllegalUsageException BLANK_EXCEPTION = new IllegalUsageException();
 	private static final Reflector REFLECTOR = new Reflector(ApexLogger.class.getName());
-
-	private Boolean batched;
-
+	private static final BlankException BLANK_EXCEPTION = new BlankException();
+	private static final LoggingConfiguration GLOBAL_CONFIG = new LoggingConfiguration();
+	
+	private LoggingConfiguration config = new LoggingConfiguration();
 	private List<Apex_Log__c> batch;
 
 	@TestVisible
-	private ApexLogger(Boolean batched) {
-		this.batched = batched;
+	private ApexLogger(Boolean batched, Boolean outputsSystemDebugLogs) {
+		this.config.batched = batched;
+		this.config.outputsSystemDebugLogs = outputsSystemDebugLogs;
 		this.batch = new List<Apex_Log__c>();
 	}
 
 	/**
-	 * Creates new ApexLogger instance with batched flag set to false
+	 * Creates new, unbatched ApexLogger instance with configuration according to Custom Metadata Settings
 	 *
-	 * @see ApexLogger#create(Boolean batched)
+	 * @see ApexLogger#create(Boolean batched, Boolean outputsSystemDebugLogs)
 	 */
 	public static ApexLogger create() {
-		return ApexLogger.create(false);
+		return ApexLogger.create(false, GLOBAL_CONFIG.outputsSystemDebugLogs);
+	}
+	
+	/**
+	 * Creates new ApexLogger instance with outputsSystemDebugLogs flag set to false
+	 *
+	 * @see ApexLogger#create(Boolean batched, Boolean outputsSystemDebugLogs)
+	 */
+	public static ApexLogger create(Boolean batched) {
+		return new ApexLogger(batched, GLOBAL_CONFIG.outputsSystemDebugLogs);
 	}
 	
 	/**
 	 * Creates new ApexLogger instance
 	 *
 	 * @param batched flag indicating if logs should be batched before committing
+	 * @param outputsSystemDebugLogs flag indicating if standard System.debug logs should be printed
 	 *
 	 * @return new ApexLogger
 	 */
-	public static ApexLogger create(Boolean batched) {
-		return new ApexLogger(batched);
-	}
-
-	public Boolean isBatched() {
-		return this.batched;
+	public static ApexLogger create(Boolean batched, Boolean outputsSystemDebugLogs) {
+		return new ApexLogger(batched, outputsSystemDebugLogs);
 	}
 
 	public void setBatched(Boolean batched) {
-		this.batched = batched;
+		this.config.batched = batched;
+	}
+	
+	public Boolean isBatched() {
+		return this.config.batched;
+	}
+	
+	public Boolean isOutputtingSystemDebugLogs() {
+		return this.config.outputsSystemDebugLogs;
+	}
+	
+	public void setOutputtingSystemDebugLogs(Boolean outputsSystemDebugLogs) {
+		this.config.outputsSystemDebugLogs = outputsSystemDebugLogs;
 	}
 
     /* DEBUG */
@@ -167,7 +186,7 @@ public without sharing class ApexLogger {
     /* LIMITS */
 
     public void limits() {
-        this.limits(null);
+        this.limits('');
     }
 
     public void limits(String messageFormat, Object[] arguments) {
@@ -175,7 +194,7 @@ public without sharing class ApexLogger {
     }
 
     public void limits(String message) {
-        if (message == null) {
+        if (String.isBlank(message)) {
             message = buildLimitsMessage();
         } else {
             message += '\n\n' + buildLimitsMessage();
@@ -251,14 +270,18 @@ public without sharing class ApexLogger {
 			Exception__c = this.buildExceptionMessage(thrownException),
 			WithException__c = (thrownException == BLANK_EXCEPTION) ? false : true
 		);
+		if (this.config.outputsSystemDebugLogs) {
+			this.systemDebug(log);
+		}
 		this.save(log);
 	}
-
+	
 	/**
-	 * If batched, saves logs into database using 1 DML statement and clears the batch, otherwise does nothing.
+	 * Saves logs into database using 1 DML statement and clears the batch
+	 * If no logs are present in the batch does nothing.
 	 */
 	public void flush() {
-		if (this.batched && !this.batch.isEmpty()) {
+		if (!this.batch.isEmpty()) {
 			insert this.batch;
 			this.batch.clear();
 		}
@@ -312,9 +335,10 @@ public without sharing class ApexLogger {
 
     private String buildLimitsMessage() {
         return String.format(
-                'CPU Time: {0} / {1} ms\nDB Time: {2} / {3} ms\nHeap: {4} / {5} bytes\n' +
-                        'DML queries: {6} / {7}\nDML rows: {8} / {9}\n' +
-                        'SOQL queries: {10} / {11}\nSOSL queries: {12} / {13}',
+                'Current context limits usage:\n' +
+	                'CPU Time: {0} / {1} ms\nDB Time: {2} / {3} ms\nHeap: {4} / {5} bytes\n' +
+                    'DML queries: {6} / {7}\nDML rows: {8} / {9}\n' +
+                    'SOQL queries: {10} / {11}\nSOSL queries: {12} / {13}',
                 new Object[] {
                         Limits.getCpuTime(), Limits.getLimitCpuTime(),
                         Limits.getDatabaseTime(), Limits.getLimitDatabaseTime(),
@@ -326,19 +350,61 @@ public without sharing class ApexLogger {
                 }
         );
     }
+	
+	private void systemDebug(Apex_Log__c log) {
+		LoggingLevel logLevel = severityToLoggingLevel(log.Severity__c);
+		String message = buildSystemDebugMessage(log);
+		System.debug(logLevel, message);
+	}
+	
+	private String buildSystemDebugMessage(Apex_Log__c log) {
+		String message = String.format(' {0} - {1}.{2}: {3}', new Object[] { log.Severity__c, log.Class__c, log.Method__c, log.Message__c });
+		if (log.WithException__c) {
+			message += '\n\n' + log.Exception__c;
+		}
+		return message + '\n';
+	}
+	
+	private LoggingLevel severityToLoggingLevel(String severity) {
+		switch on severity {
+			when 'DEBUG' { return LoggingLevel.DEBUG; }
+			when 'INFO' { return LoggingLevel.INFO; }
+			when 'WARN' { return LoggingLevel.WARN; }
+			when 'ERROR' { return LoggingLevel.ERROR; }
+			when else { return LoggingLevel.DEBUG; }
+		}
+	}
 
 	private void save(Apex_Log__c log) {
 		Datetime now = System.now();
 		log.Timestamp__c = now;
 		log.Time__c = now.format(TIMESTAMP_FORMAT);
 		
-		if (this.batched) {
+		if (this.config.batched) {
 			this.batch.add(log);
 		} else {
 			insert log;
 		}
 	}
-
+	
+	private static void loadConfiguration() {
+		List<Apex_Log_Setting__mdt> settings = [SELECT DeveloperName, Enabled__c FROM Apex_Log_Setting__mdt];
+		for (Apex_Log_Setting__mdt setting : settings) {
+			switch on setting.DeveloperName {
+				when 'Output_System_Debug_Logs' {
+					GLOBAL_CONFIG.outputsSystemDebugLogs = setting.Enabled__c;
+				}
+			}
+		}
+	}
+	
+	private class BlankException extends Exception { }
+	
+	private class LoggingConfiguration {
+		public Boolean outputsSystemDebugLogs = false;
+		public Boolean batched = false;
+	}
+	
 	private class Reflector {
         private final Caller anonymousCaller = new Caller('AnonymousApex', 'AnonymousApex');
 		private final Pattern callerPattern = Pattern.compile('\\.(.+):');
@@ -377,5 +443,11 @@ public without sharing class ApexLogger {
         }
 	}
 	
-	public class IllegalUsageException extends Exception { }
+	static {
+		ApexLogger.loadConfiguration();
+		
+		if (Test.isRunningTest()) {
+			GLOBAL_CONFIG.outputsSystemDebugLogs = false;
+		}
+	}
 }

@@ -429,7 +429,7 @@ private class ApexLoggerTest {
         List<Apex_Log__c> logs = getAllLogs();
         System.assertEquals(1, logs.size());
         System.assertEquals('LIMITS', logs[0].Severity__c);
-        System.assert(logs[0].Message__c.startsWith('CPU Time'));
+        System.assert(logs[0].Message__c.startsWith('Current context limits usage'));
         System.assertEquals('limits', logs[0].Method__c);
         System.assertEquals('ApexLoggerTest', logs[0].Class__c);
         System.assertEquals(false, logs[0].WithException__c);
@@ -550,6 +550,26 @@ private class ApexLoggerTest {
         System.assertEquals(2, Limits.getDmlStatements());
         System.assertEquals(5, getAllLogs().size());
     }
+	
+	@IsTest
+	static void outputStandardDebugLogs() {
+		// given
+		ApexLogger logger = ApexLogger.create(true);
+		logger.setOutputtingSystemDebugLogs(true);
+		
+		// when
+		logger.debug(new DmlException('Standard exception message'));
+		logger.info('Two');
+		logger.warn('Three', new TestException('Custom exception message'));
+		logger.error('Four');
+		logger.limits('Standard debug logs limits:');
+		logger.log('CUSTOM', 'Five');
+		logger.limits();
+		
+		// then
+		// we cannot check here if standard debug log was created
+		System.assertEquals(true, logger.isOutputtingSystemDebugLogs());
+	}
 
 	@IsTest
 	static void deleteAll() {

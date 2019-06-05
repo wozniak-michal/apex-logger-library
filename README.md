@@ -2,7 +2,7 @@
 Library allowing logging and exposing logs from Apex to Salesforce Admins via custom object
 which results in improving debuggability of production environments.
 
-Latest version: **0.0.3**
+Latest version: **0.0.4**
 
 ![Apex Logger Example Usage](images/example_usage_1.png)
 
@@ -10,11 +10,13 @@ Latest version: **0.0.3**
 - single, standalone class with minimal logging overhead
 - ready to use permission set "Apex Logs User"
 - auto resolving of calling methods and classes (also nested, inner classes)
+- writing logs into the standard logs `System.debug`
 - logs batching
 - limits logging
 - removal of old logs
 - 4 logging levels out of the box (DEBUG, INFO, WARN, ERROR)
-- 99%+ code coverage by tests
+
+##### NOTE: Apex Logger uses current transaction scope, which means if there will be unhandled error/exception, the whole transation will be rolled back along with issued logs. It does not apply to the standard `System.debug` logs.
 
 ## Example Usage
 ```apex
@@ -36,6 +38,18 @@ public class AccountService {
 Class and methods names are automatically resolved and exception stacktrace included
 
 ![Apex Logger Example Usage](images/example_usage_2.png)
+
+### Instantiation
+```apex
+// creates logger which is unbuffered and outputs standard logs if enabled in Apex Log Settings
+ApexLogger log = ApexLogger.create();
+
+// creates logger which is buffered and outputs standard logs if enabled in Apex Log Settings
+ApexLogger log = ApexLogger.create(true);
+
+// creates logger which is buffered and does write standard logs regardless of Apex Log Settings
+ApexLogger log = ApexLogger.create(true, true);
+```
 
 ### Logging
 ```apex
@@ -70,10 +84,24 @@ LOG.log(ApexLogger.DEBUG, 'FakeClass', 'FakeMethod', 'Explicit {0}', new Object[
 LOG.log(ApexLogger.DEBUG, 'FakeClass', 'FakeMethod', 'Explicit {0} with {1}', new Object[] { 'log', 'exception' }, exception);
 ```
 
+### Outputting `System.debug` logs
+You can enable this behaviour by setting enabling checkbox in `Output System Debug Logs` in `Apex Log Setting` custom metadata.\
+This setting can be overridden by APEX statements from below:
+```apex
+// creates unbuffered logger which outputs standard logs
+ApexLogger log = ApexLogger.create(false, true);
+
+// enables standard logs output
+log.setOutputtingSystemDebugLogs(true);
+
+// checks if logger outputs standard debug logs
+log.isOutputtingSystemDebugLogs();
+```
+
 #### Limits
 Allows to log current execution usage/limits
 ```apex
-// just log limits
+// just log limits with no specified message
 LOG.limits();
 
 // log limits with custom message 
@@ -99,6 +127,7 @@ LOG.flush();
 ```
 
 ### Manual batching control
+Manual batching controls overwrites configuration loaded from `Apex Log Setting` custom metadata.
 ```apex
 // enables batching
 LOG.setBatched(true);
@@ -112,6 +141,8 @@ LOG.isBatched();
 
 ### Logs removal
 ```apex
+LOG.delete();
+
 // deletes all logs from org
 LOG.deleteAll();
 
@@ -129,6 +160,13 @@ There is issue opened on Salesforce Success Platform with status No Fix - no rea
 https://success.salesforce.com/issues_view?id=a1p300000008dVIAAY
 
 ## Changelog
+### v0.0.4
+- Added `Apex Log Settings` custom metadata - allows to adjust logger settings during runtime without need to deploy the code
+- Added standard system logging - optionally writes logs into the standard system logs `System.debug` -
+this behaviour can be explicitly enabled by setting second parameter to true `ApexLogger.create(false, true)`
+or calling `log.setOutputtingSystemDebugLogs(true)`
+- Changed `flush` behaviour, now it will save buffered logs even if the logger is not buffered.
+
 ### v0.0.3
 - Added `limits` method, allowing to log execution limits with optional message
 - Renamed methods/fields `buffer` to `batch`
